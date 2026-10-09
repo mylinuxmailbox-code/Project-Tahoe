@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Project Tahoe Shell
+Comment=Tahoe-inspired desktop shell for x86-64 Linux
+Exec=tahoe-shell
+Terminal=false
+Categories=System;DesktopEnvironment;
+Icon=computer

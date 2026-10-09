@@ -1,0 +1,29 @@
+# Build outputs
+build/
+bin/
+*.o
+*.a
+*.so
+*.app
+*.qmlc
+
+# Generated artifacts
+*.log
+*.tmp
+*.bak
+
+# IDE and locals
+.vscode/
+.idea/
+*.swp
+*~
+
+# Local config and secrets should not be committed
+config/secrets.*
+*.env
+.env.*
+secrets/
+
+# Optional local build/cache
+.pytest_cache/
+__pycache__/

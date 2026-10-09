@@ -1,0 +1,10 @@
+TahoeDock 1.0 TahoeDock.qml
+TahoeMenuBar 1.0 TahoeMenuBar.qml
+TahoeDesktop 1.0 TahoeDesktop.qml
+TahoeWindow 1.0 TahoeWindow.qml
+TahoeWindowLayer 1.0 TahoeWindowLayer.qml
+TahoeSpotlight 1.0 TahoeSpotlight.qml
+TahoeControlCenter 1.0 TahoeControlCenter.qml
+TahoeNotificationCenter 1.0 TahoeNotificationCenter.qml
+TahoeToggle 1.0 TahoeToggle.qml
+TahoeSlider 1.0 TahoeSlider.qml

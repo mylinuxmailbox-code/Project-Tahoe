@@ -1,0 +1,40 @@
+<RCC>
+    <!--
+      The shell bundle. QML is shipped inside the binary so the application does not depend on
+      source-tree paths at runtime. The resource layout mirrors the source tree so the
+      relative imports resolve identically in both places:
+
+        on disk: src/shell/qml/main.qml        ../../shared/tokens   -> src/shared/tokens
+        in qrc:  /shell/qml/main.qml           ../../shared/tokens   -> /shared/tokens
+        on disk: src/apps/finder/FinderWindow.qml   ../../shared/tokens -> src/shared/tokens
+        in qrc:  /apps/finder/FinderWindow.qml      ../../shared/tokens -> /shared/tokens
+
+      A file listed here but also reachable by a directory import (for example
+      shared/components/qmldir) is what makes "import ../../shared/components" resolve to the
+      bundled copies instead of the source tree.
+    -->
+    <qresource prefix="/">
+        <file alias="shell/qml/main.qml">qml/main.qml</file>
+
+        <file alias="shared/tokens/DesignTokens.qml">../shared/tokens/DesignTokens.qml</file>
+        <file alias="shared/tokens/qmldir">../shared/tokens/qmldir</file>
+
+        <file alias="shared/components/TahoeDock.qml">../shared/components/TahoeDock.qml</file>
+        <file alias="shared/components/TahoeMenuBar.qml">../shared/components/TahoeMenuBar.qml</file>
+        <file alias="shared/components/TahoeDesktop.qml">../shared/components/TahoeDesktop.qml</file>
+        <file alias="shared/components/TahoeWindow.qml">../shared/components/TahoeWindow.qml</file>
+        <file alias="shared/components/TahoeWindowLayer.qml">../shared/components/TahoeWindowLayer.qml</file>
+        <file alias="shared/components/TahoeSpotlight.qml">../shared/components/TahoeSpotlight.qml</file>
+        <file alias="shared/components/TahoeControlCenter.qml">../shared/components/TahoeControlCenter.qml</file>
+        <file alias="shared/components/TahoeNotificationCenter.qml">../shared/components/TahoeNotificationCenter.qml</file>
+        <file alias="shared/components/TahoeToggle.qml">../shared/components/TahoeToggle.qml</file>
+        <file alias="shared/components/TahoeSlider.qml">../shared/components/TahoeSlider.qml</file>
+        <file alias="shared/components/qmldir">../shared/components/qmldir</file>
+
+        <file alias="services/Settings.qml">../services/Settings.qml</file>
+        <file alias="services/qmldir">../services/qmldir</file>
+
+        <file alias="apps/finder/FinderWindow.qml">../apps/finder/FinderWindow.qml</file>
+        <file alias="apps/settings/SettingsWindow.qml">../apps/settings/SettingsWindow.qml</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,77 @@
+{
+  "project": "Project Tahoe X86",
+  "layer": "Shell service interface",
+  "status": "stub",
+  "contract": {
+    "purpose": "Define the shell-facing service interface before implementation is backed by real system services.",
+    "scope": [
+      "Application launching",
+      "Window/status queries",
+      "Dock state ownership",
+      "Settings persistence handoff",
+      "Notifications",
+      "Search/launcher requests",
+      "Control Center and panel requests",
+      "Local AI tool registry handoff",
+      "Cloud provider requests"
+    ],
+    "states": [
+      "Available",
+      "Unavailable",
+      "Loading",
+      "Running",
+      "Completed",
+      "Failed",
+      "RequiresPermission",
+      "RequiresConfiguration"
+    ]
+  },
+  "components": [
+    {
+      "name": "AppLaunch",
+      "interface": "launch(appId, uri?)",
+      "returns": "launch result with explicit failure reason when unavailable",
+      "notes": "Must go through desktop environment or session launcher, not arbitrary shell execution."
+    },
+    {
+      "name": "WindowStatus",
+      "interface": "query active window, geometry, workspace, fullscreen, focus",
+      "notes": "Real platform APIs only; stubs must report Unavailable or RequiresConfiguration when unsupported."
+    },
+    {
+      "name": "Dock",
+      "interface": "pin, unpin, reorder, setRunning, activate",
+      "notes": "Owned by the shell; persisted through Settings."
+    },
+    {
+      "name": "Settings",
+      "interface": "read/write preferences under XDG_CONFIG_HOME/project-tahoe/shell/settings.json",
+      "notes": "Storing preferences is real; changing system state must be delegated to the relevant service."
+    },
+    {
+      "name": "Notifications",
+      "interface": "send, dismiss, mark read, list recent",
+      "notes": "Use native desktop notification APIs where available."
+    },
+    {
+      "name": "Search",
+      "interface": "query apps, files, settings, shortcuts, assistant actions",
+      "notes": "Results must come from real sources; empty results are valid, fabricated results are not."
+    },
+    {
+      "name": "ControlCenter",
+      "interface": "open, toggle, read device state for known categories",
+      "notes": "Only enable controls when the underlying capability is detected."
+    },
+    {
+      "name": "Assistant",
+      "interface": "query typed tools only; no unrestricted shell access",
+      "notes": "Tool execution requires schema, validation, authorization, and confirmation for high-impact actions."
+    },
+    {
+      "name": "Cloud",
+      "interface": "local files provider plus Google Drive provider through OAuth 2.0",
+      "notes": "iCloud is supported only where technically honest and documented."
+    }
+  ]
+}

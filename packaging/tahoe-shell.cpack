@@ -1,0 +1,24 @@
+# CPack-style packaging notes
+# Current project version: 0.1.0 for Project Tahoe X86
+#
+# This is a packaging metadata note and assembly reference, not generated output.
+#
+# Current packaging target name: tahoe-shell
+# Expected artifact location after build: build/bin/tahoe-shell
+#
+# Packaging must preserve:
+# - The exact application name used by the shell CMake target
+# - The version string used by the project
+# - The separation between verified and planned behavior
+#
+# Packaging rules:
+# - Do not generate installers or packages until the build is verified.
+# - Do not embed secrets, OAuth tokens, or user-specific config.
+# - Do not claim a package is bootable or installable until it has been built and tested.
+#
+# Linux packaging notes:
+# - A CPack-driven package may be appropriate once the shell builds.
+# - Desktop entry, icons, and file associations belong in a separate install manifest.
+#
+# Cross-platform installer notes:
+# - Optional installer prep may exist for other platforms, but it must be labeled as such.
