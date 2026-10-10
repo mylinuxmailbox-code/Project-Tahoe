@@ -41,8 +41,16 @@ Item {
         anchors.right: parent.right
         anchors.topMargin: DesignTokens.spacingSmall
         anchors.rightMargin: DesignTokens.spacingSmall
+        // Sized from the list's own content rather than from the anchored list area: listArea
+        // is anchored to this panel's bottom edge, so reading its height here would be
+        // circular (Qt reports that as a binding loop on "height").
+        readonly property int listContentHeight: Math.min(400, list.contentHeight)
+
         width: 360
-        height: Math.min(460, header.height + listArea.height + DesignTokens.spacingDefault * 2)
+        height: Math.max(140,
+                         DesignTokens.spacingDefault + header.height
+                         + DesignTokens.spacingSmall + listContentHeight
+                         + DesignTokens.spacingDefault)
         radius: DesignTokens.radiusPanel
         color: DesignTokens.bgGlass
         border.width: 1

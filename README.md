@@ -4,8 +4,11 @@ A custom desktop shell and application layer for Linux, built on Qt 6 and QML, a
 macOS-like desktop experience implemented with real behaviour rather than mock-ups.
 
 - **Status**: Phase 1 (desktop foundation) and most of Phase 2 (core interaction) are
-  implemented. Nothing has been compiled or run yet, because no Qt 6 development environment
-  was available where the code was written. See `build_env.md` for the exact situation.
+  implemented, and the shell **builds and runs**: verified with Qt 6.8.3 both headless and on a
+  real X11 display, including reading and re-writing its settings file. See `build_env.md` for
+  what was verified and how to reproduce it, and `docs/FEATURE_MATRIX.md` for what is not
+  implemented.
+- **Screenshots**: `docs/screenshots/shell-dark.png`, `docs/screenshots/shell-light.png`
 - **Licence**: see the notes at the end of this file.
 
 ## What works today
@@ -15,8 +18,9 @@ Shell:
 - Desktop surface with a wallpaper (or a gradient when none is set), reporting real load errors
 - Menu bar with the active application, a live clock, a notification indicator with the real
   unread count, and a Control Center button
-- Dock with pinned and running items, hover magnification, auto-hide with a reveal strip, and
-  real launching
+- Dock with pinned and running items, icons resolved from the system icon theme (falling back
+  to the item's label when no icon exists), hover magnification, auto-hide with a reveal strip,
+  and real launching
 - Window layer: drag, eight resize handles with minimum sizes, focus follows click, stacking,
   minimise, zoom, and close for the applications the shell hosts
 - Spotlight (`Ctrl+Space`): unified search over installed applications, real files, and
@@ -91,6 +95,15 @@ make build
 ./build/bin/tahoe-shell        # or: ./launch_tahoe.sh
 ```
 
+Without a distribution Qt 6 package, `aqtinstall` into a directory works too (and is how the
+verified build was made); `build_env.md` has that route, plus the two system libraries Qt's
+official Linux binaries need. To check a build without a display, the shell can render itself
+once and exit:
+
+```bash
+QT_QPA_PLATFORM=offscreen ./build/bin/tahoe-shell --screenshot /tmp/shell.png
+```
+
 ## Verification
 
 ```bash
@@ -99,8 +112,9 @@ make lint-qml     # qmllint; exits 2 when qmllint is absent, so a skip is not a 
 ```
 
 `make check` proves the source tree is internally consistent. It does not compile or run
-anything, and it is not a substitute for a build. See `CONTRIBUTING.md` for the rules that
-keep the project honest.
+anything, and it is not a substitute for a build — the first real build of this project found
+six defects that `make check` had been reporting as passing. See `build_env.md` for the build
+and run verification, and `CONTRIBUTING.md` for the rules that keep the project honest.
 
 ## Licence
 

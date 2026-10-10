@@ -26,6 +26,14 @@ Item {
         "settings": qsTr("Settings")
     })
 
+    // System icon names for the hosted applications. Names rather than paths: the shell
+    // resolves them through the icon theme, the same way it resolves an installed
+    // application's icon, and shows a label instead when nothing is found.
+    readonly property var appIcons: ({
+        "finder": "system-file-manager",
+        "settings": "preferences-system"
+    })
+
     // Open windows. Row roles: appId, title, x, y, width, height, stack, minimized, zoomed.
     property ListModel windows: ListModel {}
 
@@ -51,6 +59,11 @@ Item {
         if (appTitles[appId] !== undefined)
             return appTitles[appId]
         return fallback && fallback.length > 0 ? fallback : appId
+    }
+
+    // Icon theme name for a hosted application, or empty when it has none.
+    function iconNameFor(appId) {
+        return appIcons[appId] !== undefined ? appIcons[appId] : ""
     }
 
     function hostedAppIds() {

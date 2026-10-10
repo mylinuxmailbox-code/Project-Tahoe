@@ -1,6 +1,7 @@
 import QtQuick
 import Tahoe.Services 1.0
 import "../tokens"
+import "../../services"
 import "."
 
 /* Project Tahoe X86 Control Center.
@@ -161,7 +162,6 @@ Item {
                 to: 96
                 step: 2
                 value: Settings.dockIconSize
-                reduceMotion: controlCenter.reduceMotion
                 onMoved: function (value) { Settings.dockIconSize = value }
             }
 
@@ -248,8 +248,8 @@ Item {
                     hoverEnabled: true
                     onClicked: NotificationService.notify(qsTr("Tahoe Shell"),
                                                           qsTr("Test notification"),
-                                                          qsTr("This notification came from the shell "
-                                                               "itself, through the same service that "
+                                                          qsTr("This notification came from the shell " +
+                                                               "itself, through the same service that " +
                                                                "applications use."), 1)
                 }
             }

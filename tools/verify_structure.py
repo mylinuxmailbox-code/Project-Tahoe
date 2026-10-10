@@ -210,7 +210,12 @@ def check_services_cpp() -> None:
                    "removePermanently", "search"]:
         check(method in files_h, f"FileService is missing {method}()")
     check('QStringLiteral("error")' in files_cpp, "FileService does not return error strings")
-    check("setFollowSymlinks(false)" in files_cpp, "FileService search may follow symlink loops")
+    # QDirIterator has no setFollowSymlinks(). Not descending into symlinks is its default,
+    # and QDirIterator::FollowSymlinks is the opt-in flag, so the real requirement is that
+    # the flag is absent. (This check previously looked for a setFollowSymlinks() call that
+    # does not exist in Qt, which is why it passed on code that did not compile.)
+    check("QDirIterator::FollowSymlinks" not in files_cpp,
+          "FileService search may follow symlink loops")
 
     # TrashService: the freedesktop trash specification, not a private folder.
     trash_h = read("src/services/TrashService.h")

@@ -232,7 +232,7 @@ ApplicationWindow {
         autoHide: Settings.dockAutoHide
         reduceMotion: Settings.reduceMotion
 
-        pinnedItems: Settings.dockPinnedApps
+        pinnedItems: root.dockItems()
         // Running indicators come from the real open-window model.
         runningItems: root.runningItemList()
 
@@ -275,13 +275,56 @@ ApplicationWindow {
         reduceMotion: Settings.reduceMotion
     }
 
-    // List of applications with an open window, for the Dock's running indicators.
+    // Icon for an application id: the icon file from its .desktop entry when it is an
+    // application installed on this machine, otherwise the hosted application's system icon
+    // name resolved through the icon theme. Empty means no icon was found, and the Dock
+    // falls back to the item's label rather than showing an empty tile.
+    // Image.source takes a URL, while the icon lookups return absolute file paths. A bare
+    // path would be resolved against this QML file's own URL (qrc:/shell/qml/main.qml), which
+    // is why a resolved icon failed to load before this conversion existed. Anything that is
+    // not an absolute path is passed through unchanged.
+    function toIconUrl(path) {
+        if (path.indexOf("/") === 0)
+            return "file://" + path
+        return path
+    }
+
+    function appIconSource(appId) {
+        var apps = AppRegistry.toVariantList()
+        for (var i = 0; i < apps.length; ++i) {
+            if (apps[i].desktopId === appId && apps[i].iconPath.length > 0)
+                return toIconUrl(apps[i].iconPath)
+        }
+
+        if (windowLayer.isHosted(appId))
+            return toIconUrl(AppRegistry.resolveIcon(windowLayer.iconNameFor(appId)))
+
+        return ""
+    }
+
+    // Pinned Dock items from Settings, each with its resolved icon. Reading
+    // Settings.dockPinnedApps inside the function keeps the binding live: changing the pinned
+    // list in Settings re-evaluates it.
+    function dockItems() {
+        var pinned = Settings.dockPinnedApps
+        var list = []
+        for (var i = 0; i < pinned.length; ++i) {
+            list.push({ "id": pinned[i].id,
+                        "label": pinned[i].label,
+                        "iconSource": appIconSource(pinned[i].id) })
+        }
+        return list
+    }
+
+    // List of applications with an open window, for the Dock's running indicators and icons.
     // It reads windows.count, so the binding updates whenever a window opens or closes.
     function runningItemList() {
         var list = []
         for (var row = 0; row < windowLayer.windows.count; ++row) {
             var entry = windowLayer.windows.get(row)
-            list.push({ "id": entry.appId, "label": entry.title })
+            list.push({ "id": entry.appId,
+                        "label": entry.title,
+                        "iconSource": appIconSource(entry.appId) })
         }
         return list
     }

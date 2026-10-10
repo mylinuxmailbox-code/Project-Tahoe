@@ -1,6 +1,11 @@
+#include <QCommandLineOption>
+#include <QCommandLineParser>
 #include <QGuiApplication>
+#include <QImage>
 #include <QQmlApplicationEngine>
 #include <QQmlEngine>
+#include <QQuickWindow>
+#include <QTimer>
 #include <QDebug>
 #include <QObject>
 #include <QString>
@@ -27,6 +32,21 @@ int main(int argc, char *argv[])
     app.setApplicationName(QStringLiteral("Tahoe Shell"));
     app.setOrganizationName(QStringLiteral("Project Tahoe"));
     app.setApplicationVersion(QStringLiteral(TAHOE_VERSION));
+
+    // The shell is a normal desktop session surface. The one extra mode is for verification:
+    // it renders the shell once, writes a PNG, and exits, so a build can be checked without a
+    // display or a running desktop session (see --screenshot in build_env.md).
+    QCommandLineParser parser;
+    parser.setApplicationDescription(QStringLiteral(
+        "Project Tahoe X86 desktop shell. Run without arguments to start the shell."));
+    parser.addHelpOption();
+    parser.addVersionOption();
+    QCommandLineOption screenshotOption(
+        QStringLiteral("screenshot"),
+        QStringLiteral("Render the shell once, write a PNG to <file>, and exit."),
+        QStringLiteral("file"));
+    parser.addOption(screenshotOption);
+    parser.process(app);
 
     // Services are created before the engine so they outlive it during shutdown (locals are
     // destroyed in reverse order, which also means SearchService - which holds pointers to
@@ -70,6 +90,31 @@ int main(int argc, char *argv[])
     if (engine.rootObjects().isEmpty()) {
         qWarning() << "Tahoe Shell: failed to load qrc:/shell/qml/main.qml";
         return EXIT_FAILURE;
+    }
+
+    if (parser.isSet(screenshotOption)) {
+        const QString target = parser.value(screenshotOption);
+
+        // One full second, so the first layout pass, the clock, and the registry-driven Dock
+        // contents are all in place before the frame is captured.
+        QTimer::singleShot(1000, &app, [&engine, &app, target]() {
+            auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().constFirst());
+            if (!window) {
+                qWarning() << "--screenshot: the shell root object is not a window";
+                QCoreApplication::exit(EXIT_FAILURE);
+                return;
+            }
+
+            const QImage frame = window->grabWindow();
+            if (frame.isNull() || !frame.save(target)) {
+                qWarning() << "--screenshot: could not write" << target;
+                QCoreApplication::exit(EXIT_FAILURE);
+                return;
+            }
+
+            qInfo() << "--screenshot: wrote" << target << frame.width() << "x" << frame.height();
+            QCoreApplication::quit();
+        });
     }
 
     return app.exec();

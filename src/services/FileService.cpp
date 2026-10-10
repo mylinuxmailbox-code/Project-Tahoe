@@ -101,9 +101,10 @@ void FileService::collectMatches(const QString &root, const QString &pattern, in
     if (results->size() >= limit)
         return;
 
+    // No FollowSymlinks flag: the default is to report symlinks without descending into
+    // them, which is what a bounded search over a user directory needs.
     QDirIterator it(root, QDir::AllEntries | QDir::NoDotAndDotDot | QDir::System,
                     QDirIterator::Subdirectories);
-    it.setFollowSymlinks(false);
 
     while (it.hasNext() && results->size() < limit) {
         it.next();

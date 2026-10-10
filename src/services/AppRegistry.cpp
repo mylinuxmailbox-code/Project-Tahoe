@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHash>
+#include <QIcon>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QTextStream>
@@ -65,7 +66,7 @@ bool isTruthy(const QString &value)
 } // namespace
 
 AppRegistry::AppRegistry(QObject *parent)
-    : QObject(parent)
+    : QAbstractListModel(parent)
 {
     refresh();
 }
@@ -211,19 +212,48 @@ QString AppRegistry::resolveIcon(const QString &iconName) const
     const QStringList extensions = { QStringLiteral("png"), QStringLiteral("svg"),
                                      QStringLiteral("xpm") };
 
-    const QStringList themes = { QStringLiteral("hicolor"), QStringLiteral("Adwaita"),
-                                 QStringLiteral("gnome"), QStringLiteral("breeze") };
-    const QStringList themeDirs = iconThemeDirs();
+    // Icon themes organise icons into context subdirectories, and the name alone does not say
+    // which one holds it: "preferences-system" is a category icon, "system-file-manager" is an
+    // application icon. Every standard context has to be searched. Apps come first because
+    // that is where most .desktop Icon values point.
+    const QStringList contexts = {
+        QStringLiteral("apps"),       QStringLiteral("categories"),
+        QStringLiteral("devices"),    QStringLiteral("places"),
+        QStringLiteral("status"),     QStringLiteral("mimetypes"),
+        QStringLiteral("actions"),    QStringLiteral("emblems")
+    };
+
+    // The active theme first, so a themed desktop gets its own artwork, then the themes a
+    // lookup may fall back to. hicolor is the fallback the icon theme specification requires
+    // every theme to provide.
+    QStringList themes;
+    const QString activeTheme = QIcon::themeName();
+    if (!activeTheme.isEmpty())
+        themes << activeTheme;
+    themes << QStringLiteral("Adwaita") << QStringLiteral("gnome")
+           << QStringLiteral("hicolor") << QStringLiteral("breeze") << QStringLiteral("mate");
+    themes.removeDuplicates();
+
+    // QIcon::themeSearchPaths() reflects the desktop's own configuration (including ~/.icons
+    // and any XDG_DATA_DIRS entries). The explicit iconThemeDirs() list is kept as well so the
+    // lookup still works when the shell is started outside a desktop session.
+    QStringList themeDirs = QIcon::themeSearchPaths();
+    for (const QString &dir : iconThemeDirs()) {
+        if (!themeDirs.contains(dir))
+            themeDirs << dir;
+    }
 
     for (const QString &themeDir : themeDirs) {
         for (const QString &theme : themes) {
             for (const QString &size : sizes) {
-                for (const QString &extension : extensions) {
-                    const QString candidate = QStringLiteral("%1/%2/%3/apps/%4.%5")
-                                                  .arg(themeDir, theme, size, iconName,
-                                                       extension);
-                    if (QFileInfo::exists(candidate))
-                        return candidate;
+                for (const QString &context : contexts) {
+                    for (const QString &extension : extensions) {
+                        const QString candidate = QStringLiteral("%1/%2/%3/%4/%5.%6")
+                                                      .arg(themeDir, theme, size, context,
+                                                           iconName, extension);
+                        if (QFileInfo::exists(candidate))
+                            return candidate;
+                    }
                 }
             }
         }

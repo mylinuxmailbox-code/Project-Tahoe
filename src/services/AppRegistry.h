@@ -26,7 +26,7 @@
  *   - Entries marked NoDisplay=true or Hidden=true are excluded (standard behaviour).
  *   - launch() reports exactly what happened; it never reports success for a failed start.
  */
-class AppRegistry : public QObject
+class AppRegistry : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(int count READ count NOTIFY countChanged)

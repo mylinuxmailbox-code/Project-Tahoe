@@ -3,20 +3,22 @@ import "../tokens"
 
 /* Project Tahoe X86 Dock.
  *
- * Status: PARTIAL implementation. Nothing here launches applications yet.
+ * Status: PARTIAL implementation.
  *
  * Implemented:
  *  - pinned + running item model with an explicit API and change-notifying updates
- *  - per-item activation signal wired to a real mouse area
+ *  - per-item activation signal wired to a real mouse area; the shell routes it to
+ *    activateApp(), which opens a hosted window or launches a real process
+ *  - real icons: items carry the icon path the shell resolved, and a tile shows the item's
+ *    label instead when no icon could be resolved (never a fabricated icon)
  *  - hover magnification (single-tile scale; macOS-style neighbour magnification not yet)
  *  - optional auto-hide with a bottom edge reveal strip
  *  - running-app indicator dots derived from real runningItems state
  *
  * Not implemented yet:
- *  - application launching (must route through the AppLaunch service, still a contract stub)
  *  - drag-and-drop pinning and reordering
  *  - downloads stack and trash
- *  - app icons (tiles currently render the item label as a deliberate placeholder)
+ *  - neighbour magnification and the bounce-on-launch animation
  */
 Item {
     id: root
@@ -145,9 +147,31 @@ Item {
                         id: frame
                         anchors.fill: parent
                         radius: DesignTokens.radiusDefault
-                        color: tile.isActive ? DesignTokens.bgRaised : DesignTokens.bgPanel
+                        // bgRaised, not bgPanel: a tile has to read as a separate surface on
+                        // the glass Dock, and bgPanel is the same colour as the panel itself.
+                        color: DesignTokens.bgRaised
                         border.width: tile.isActive ? 2 : 1
-                        border.color: tile.isActive ? DesignTokens.accent : DesignTokens.borderDefault
+                        border.color: tile.isActive ? DesignTokens.accent
+                                                    : (tile.isHovered ? DesignTokens.borderDefault
+                                                                      : "transparent")
+
+                        Image {
+                            id: icon
+                            anchors.centerIn: parent
+                            width: root.iconSize - DesignTokens.spacingSmall
+                            height: width
+                            source: modelData.iconSource ? modelData.iconSource : ""
+                            // Requested at twice the drawn size so the icon stays crisp on
+                            // high-DPI displays and when magnified.
+                            sourceSize.width: width * 2
+                            sourceSize.height: height * 2
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            asynchronous: true
+                            // A failed load (missing or unreadable icon) leaves the label
+                            // below visible instead of an empty tile.
+                            visible: status === Image.Ready
+                        }
 
                         Text {
                             anchors.centerIn: parent
@@ -157,6 +181,7 @@ Item {
                             font.pixelSize: DesignTokens.fontSizeCaption
                             horizontalAlignment: Text.AlignHCenter
                             elide: Text.ElideRight
+                            visible: icon.status !== Image.Ready
                         }
                     }
 

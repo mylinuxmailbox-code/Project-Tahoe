@@ -1,24 +1,30 @@
 # Project Tahoe X86 — Feature Matrix
 
 - **Purpose**: Track what is implemented, partially implemented, or planned
-- **Status**: Updated for the Phase 2 implementation
+- **Status**: Updated after the first successful build and run
 - **Rule**: a feature is never marked implemented because it looks right. It is implemented
   when it is connected to real behaviour, persists where required, and reports failures.
 
 ## Legend
 
-- ✅ Implemented and connected to real behaviour (not yet compiled or run — see below)
+- ✅ Implemented and connected to real behaviour (verified by a build and a run where the
+  behaviour is observable; where it is only structurally verified, the row names the gap)
 - 🟡 Partially implemented, with the gap named
 - ⚪ Planned
 - ❌ Not possible within current constraints
 
 ## Verification status of everything marked ✅
 
-**Nothing in this project has been compiled or run.** No Qt 6 development environment was
-available on the machine where it was written (`qt6-base-dev` and `qt6-declarative-dev` cannot
-be installed there without a package manager password). Every ✅ below means "the code is
-written, wired to a real service, and structurally verified by `make check`" — not "observed
-working". `make check` runs 479 structural checks plus a Qt include check.
+The shell **has now been built and run** (Qt 6.8.3, 2026-10-10). Where a ✅ below describes
+behaviour that a run can observe, it was observed: the shell starts, renders, reads and re-writes
+its settings file, and reports `152 applications found` from this machine's real `.desktop`
+files. Screenshots from those runs are committed under `docs/screenshots/`.
+
+Everything else is structural. `make check` runs 545 checks without Qt and neither compiles nor
+runs anything — and it is not a substitute for a build, because the first real build found six
+defects that it had been reporting as passing. Those checks are a net for accidental damage to
+the source tree, not evidence that a feature works. See `build_env.md` for the build and run
+evidence.
 
 ## Shell and Desktop
 
@@ -33,7 +39,8 @@ working". `make check` runs 479 structural checks plus a Qt include check.
 - Menu bar status items (network, battery, volume, Bluetooth): ⚪ the shell has no backend for
   them; the Control Center states this instead of showing dead controls
 - Dock with pinned and running apps: ✅ pinned items persisted; running items reflect the real
-  open-window model; activation launches
+  open-window model; activation launches; icons resolved from the system icon theme through the
+  real lookup order (verified by render)
 - Dock magnification: 🟡 hover-based single-tile scaling with a configurable strength; macOS
   neighbour magnification is not implemented
 - Dock auto-hide: ✅ bottom-edge reveal strip
@@ -99,12 +106,16 @@ working". `make check` runs 479 structural checks plus a Qt include check.
 
 ## Infrastructure
 
-- Reproducible build: 🟡 CMake with `AUTORCC` and `AUTOMOC`, a single version definition,
-  install rules, and CPack configured; never compiled on any machine
-- Structural verification: ✅ `make check` — 479 structural checks plus a Qt include check
-- Static QML checking: 🟡 `make lint-qml` runs `qmllint` when present and exits 2 when it is
-  absent, so a skipped check is never reported as a pass
-- Development launcher: ✅ `launch_tahoe.sh` validates the built binary before starting
+- Reproducible build: 🟡 CMake with `AUTORCC` and `AUTOMOC`, a single version definition, and
+  install rules; compiles cleanly with Qt 6.8.3 and the result runs. CPack is configured but
+  never exercised, there is no CI, and it has been built on one machine only
+- Structural verification: ✅ `make check` — 545 structural checks plus a Qt include check
+- Static QML checking: 🟡 `make lint-qml` runs `qmllint` when present (verified with Qt 6.8.3)
+  and exits 2 when it is absent, so a skipped check is never reported as a pass; it currently
+  reports unqualified-access warnings and no errors
+- Headless render check: ✅ `tahoe-shell --screenshot <file>` renders the shell once and exits,
+  so a build can be checked without a display or a desktop session
+- Development launcher: ✅ `launch_tahoe.sh` validates the built binary before executing it
 - Automated tests for the C++ services: ⚪ only structural verification exists
 - Desktop session entry: ✅ a `.desktop` file is installed by CMake
 - Installer, ISO, recovery, uninstall: ⚪
