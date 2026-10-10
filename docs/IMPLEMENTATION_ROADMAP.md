@@ -104,6 +104,8 @@ Exit criteria: there is a tested path to install and recover, with documented li
   verified to round-trip.
 - The freedesktop trash specification, the real filesystem, and the session D-Bus name for
   notifications.
+- Behavioural test suite for the four services (`make test`), verified to fail when the
+  behaviour it checks is broken.
 
 ### Unresolved blockers
 

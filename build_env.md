@@ -24,6 +24,7 @@ Verified facts, with the evidence:
 | The shell renders | `--screenshot` writes a 1280x800 PNG; the pixels match the design tokens (see "Verification performed") |
 | It runs on a real display, not only offscreen | `DISPLAY=:0 ./build/bin/tahoe-shell --screenshot ...` renders through the real X11/OpenGL path |
 | Preferences persist and are re-applied | with `XDG_CONFIG_HOME` pointing at a config file set to `light`, the shell renders light (mean brightness 91% vs 6% dark) and rewrites the file byte-for-byte the same |
+| The service contracts hold | `make test` runs 9 behavioural tests over four services; all pass, and a deliberately mutated `FileService` makes one of them fail |
 
 Structural verification (`make check`, 545 checks) passes as well, but it is not what makes the
 claims above true: the run is.
@@ -66,13 +67,19 @@ python3 -m aqt install-qt linux desktop 6.8.3 linux_gcc_64 \
   --archives qtbase qtdeclarative qtsvg --outputdir "$HOME/Qt"
 ```
 
-Then configure against it:
+Then configure against it. The `Makefile` forwards extra CMake flags, so the whole build is:
+
+```bash
+make build CMAKE_FLAGS="-DCMAKE_PREFIX_PATH=$HOME/Qt/6.8.3/gcc_64"
+./build/bin/tahoe-shell            # or: ./launch_tahoe.sh
+```
+
+Or, equivalently, with CMake directly:
 
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_PREFIX_PATH="$HOME/Qt/6.8.3/gcc_64"
 cmake --build build -j"$(nproc)"
-./build/bin/tahoe-shell            # or: ./launch_tahoe.sh
 ```
 
 ### Build and run as your normal user, not as root
@@ -139,6 +146,32 @@ What the pixels showed, checked against `src/shared/tokens/DesignTokens.qml`:
   round-trips without loss.
 
 Screenshots from these runs are committed under `docs/screenshots/`.
+
+## Tests
+
+```bash
+make test                 # builds, then: cd build && ctest --output-on-failure
+cd build && ctest -R services -V     # the same, with per-test names
+```
+
+`tests/tst_services.cpp` covers `SettingsStore`, `FileService`, `NotificationService`, and
+`AppRegistry`, including the contracts that are about honesty rather than success: a missing
+settings file is "defaults in use" and not an error, a file that fails to parse is reported and
+is never overwritten, a failed file operation carries a real error string, and icon resolution
+returns either a file that exists or nothing at all. The tests point `XDG_CONFIG_HOME` at a
+temporary directory and work inside another one, so they never touch the user's own settings or
+files, and they need no desktop session.
+
+Two things worth knowing about them:
+
+- They link the real service sources rather than copies, so they fail if a service stops
+  compiling or changes its contract.
+- Their ability to fail was verified rather than assumed: making `FileService::failure()` report
+  success with no error string makes `fileServiceFailuresCarryAnError` fail, and reverting it
+  makes the suite pass again.
+
+Not covered: the QML layer, window behaviour, and the D-Bus notification server. Those currently
+have no automated tests, which `docs/FEATURE_MATRIX.md` states rather than glosses over.
 
 ## Defects found by the first build
 

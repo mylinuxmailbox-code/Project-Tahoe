@@ -116,7 +116,12 @@ evidence.
 - Headless render check: ✅ `tahoe-shell --screenshot <file>` renders the shell once and exits,
   so a build can be checked without a display or a desktop session
 - Development launcher: ✅ `launch_tahoe.sh` validates the built binary before executing it
-- Automated tests for the C++ services: ⚪ only structural verification exists
+- Automated tests for the C++ services: ✅ `make test` / `ctest` — 9 behavioural tests over
+  `SettingsStore`, `FileService`, `NotificationService`, and `AppRegistry`, including their
+  failure contracts. They run without a desktop session and without touching the user's own
+  configuration or files. Their value was checked by mutation: making `FileService` report a
+  failed operation as a success makes `fileServiceFailuresCarryAnError` fail. Test coverage of
+  the QML layer does not exist
 - Desktop session entry: ✅ a `.desktop` file is installed by CMake
 - Installer, ISO, recovery, uninstall: ⚪
 

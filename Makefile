@@ -1,4 +1,4 @@
-.PHONY: configure build clean check lint-qml verify-deps help
+.PHONY: configure build clean check test lint-qml verify-deps help
 
 QML_FILES = src/shell/qml/main.qml \
             src/apps/finder/FinderWindow.qml \
@@ -16,8 +16,12 @@ QML_FILES = src/shell/qml/main.qml \
             src/shared/components/TahoeToggle.qml \
             src/shared/components/TahoeSlider.qml
 
+# Extra CMake flags. Use this when Qt is not on the default search path, for example:
+#   make build CMAKE_FLAGS="-DCMAKE_PREFIX_PATH=$HOME/Qt/6.8.3/gcc_64"
+CMAKE_FLAGS ?=
+
 configure:
-	cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+	cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug $(CMAKE_FLAGS)
 
 build: configure
 	cmake --build build --target tahoe-shell
@@ -32,6 +36,13 @@ clean:
 check:
 	python3 tools/verify_structure.py
 	python3 tools/check_includes.py
+
+# Behavioural tests for the C++ services, through CTest. The test binary is built here rather
+# than reusing `build`, which builds the shell target only, and it is built before running,
+# because a test run against a stale binary proves nothing.
+test: configure
+	cmake --build build --target tahoe-tests
+	cd build && ctest --output-on-failure
 
 # Static QML checking. Requires qt6-declarative-dev-tools (qmllint).
 # Exit codes: 0 = qmllint ran and passed, 2 = skipped (tool absent), non-zero = qmllint failed.
@@ -78,6 +89,7 @@ help:
 	@echo "  build      - configure and build tahoe-shell"
 	@echo "  clean      - remove build tree"
 	@echo "  check      - structural + include verification (no Qt required)"
+	@echo "  test       - build, then run the C++ service tests through ctest"
 	@echo "  lint-qml   - static QML check via qmllint (skips honestly if absent)"
 	@echo "  verify-deps - check key build dependencies"
 	@echo "  help       - show this message"

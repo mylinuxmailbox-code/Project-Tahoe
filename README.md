@@ -107,9 +107,16 @@ QT_QPA_PLATFORM=offscreen ./build/bin/tahoe-shell --screenshot /tmp/shell.png
 ## Verification
 
 ```bash
+make test         # builds, then runs the C++ service tests through ctest
 make check        # structural checks + a Qt include check; no Qt needed
 make lint-qml     # qmllint; exits 2 when qmllint is absent, so a skip is not a pass
 ```
+
+`make test` is the behavioural one: it calls the real `SettingsStore`, `FileService`,
+`NotificationService`, and `AppRegistry` and checks their documented contracts, including the
+ones about honesty — a missing settings file is defaults in use and not an error, a broken one is
+reported and left untouched, and a failed file operation carries a real error string. The tests
+run without a desktop session and never touch your own configuration or files.
 
 `make check` proves the source tree is internally consistent. It does not compile or run
 anything, and it is not a substitute for a build — the first real build of this project found

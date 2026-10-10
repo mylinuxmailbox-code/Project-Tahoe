@@ -5,10 +5,16 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(TAHOO_BUILD_SHELL "Build the Tahoe shell" ON)
+option(TAHOO_BUILD_TESTS "Build the C++ service tests" ON)
 option(TAHOO_ENABLE_PACKAGING "Enable CPack packaging targets" ON)
 
 if(TAHOO_BUILD_SHELL)
     add_subdirectory(src/shell)
+endif()
+
+if(TAHOO_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 
 if(TAHOO_ENABLE_PACKAGING)
@@ -20,4 +26,4 @@ if(TAHOO_ENABLE_PACKAGING)
     include(CPack)
 endif()
 
-message(STATUS "Tahoe X86 ${PROJECT_VERSION} configured (shell: ${TAHOO_BUILD_SHELL}, packaging: ${TAHOO_ENABLE_PACKAGING})")
+message(STATUS "Tahoe X86 ${PROJECT_VERSION} configured (shell: ${TAHOO_BUILD_SHELL}, tests: ${TAHOO_BUILD_TESTS}, packaging: ${TAHOO_ENABLE_PACKAGING})")
