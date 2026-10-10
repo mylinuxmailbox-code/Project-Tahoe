@@ -70,6 +70,7 @@ src/apps/             applications the shell hosts (finder, settings)
 src/shared/tokens/    design tokens (single source of truth for colour, spacing, motion)
 src/shared/components/ shell components: desktop, menu bar, dock, windows, panels, controls
 src/services/         C++ services and the shared Settings singleton
+tests/                behavioural tests for the C++ services (Qt Test, run by `make test`)
 tools/               verification tools that run without Qt
 docs/                specification, architecture, roadmap, feature matrix, security model
 packaging/           packaging metadata and release checklist
@@ -77,7 +78,7 @@ packaging/           packaging metadata and release checklist
 
 ## Building
 
-Requirements: Qt 6.2 or newer (Core, Gui, Qml, Quick, and optionally DBus), CMake 3.16+, and
+Requirements: Qt 6.2 or newer (Core, Gui, Qml, Quick, and optionally DBus), CMake 3.22+, and
 a C++17 compiler. On Debian or Ubuntu-class systems:
 
 ```bash
