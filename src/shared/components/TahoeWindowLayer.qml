@@ -23,12 +23,14 @@ Item {
     // Applications this shell hosts, by application id.
     readonly property var appSources: ({
         "finder": "qrc:/apps/finder/FinderWindow.qml",
-        "settings": "qrc:/apps/settings/SettingsWindow.qml"
+        "settings": "qrc:/apps/settings/SettingsWindow.qml",
+        "calculator": "qrc:/apps/calculator/CalculatorWindow.qml"
     })
 
     readonly property var appTitles: ({
         "finder": qsTr("Finder"),
-        "settings": qsTr("Settings")
+        "settings": qsTr("Settings"),
+        "calculator": qsTr("Calculator")
     })
 
     // System icon names for the hosted applications. Names rather than paths: the shell
@@ -36,7 +38,8 @@ Item {
     // application's icon, and shows a label instead when nothing is found.
     readonly property var appIcons: ({
         "finder": "system-file-manager",
-        "settings": "preferences-system"
+        "settings": "preferences-system",
+        "calculator": "accessories-calculator"
     })
 
     // Smallest size a hosted window may be restored to, matching the resize handles.
