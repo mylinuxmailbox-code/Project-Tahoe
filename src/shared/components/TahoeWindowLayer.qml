@@ -24,13 +24,15 @@ Item {
     readonly property var appSources: ({
         "finder": "qrc:/apps/finder/FinderWindow.qml",
         "settings": "qrc:/apps/settings/SettingsWindow.qml",
-        "calculator": "qrc:/apps/calculator/CalculatorWindow.qml"
+        "calculator": "qrc:/apps/calculator/CalculatorWindow.qml",
+        "texteditor": "qrc:/apps/texteditor/TextEditorWindow.qml"
     })
 
     readonly property var appTitles: ({
         "finder": qsTr("Finder"),
         "settings": qsTr("Settings"),
-        "calculator": qsTr("Calculator")
+        "calculator": qsTr("Calculator"),
+        "texteditor": qsTr("Text Editor")
     })
 
     // System icon names for the hosted applications. Names rather than paths: the shell
@@ -39,7 +41,8 @@ Item {
     readonly property var appIcons: ({
         "finder": "system-file-manager",
         "settings": "preferences-system",
-        "calculator": "accessories-calculator"
+        "calculator": "accessories-calculator",
+        "texteditor": "accessories-text-editor"
     })
 
     // Smallest size a hosted window may be restored to, matching the resize handles.
