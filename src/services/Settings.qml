@@ -56,6 +56,12 @@ QtObject {
     property bool showWindowTitleBars: true
     property int windowCornerRadius: 12
 
+    // ---- Hosted window geometry ----
+    // Map of hosted application id to { "x", "y", "width", "height" }. Written when a window
+    // is moved or resized, and read back when the window is opened again. Never assigned in
+    // place: setWindowGeometry() replaces the whole map, so every change is observed.
+    property var windowGeometry: ({})
+
     onDockPositionChanged: notify()
     onDockIconSizeChanged: notify()
     onDockMagnificationChanged: notify()
@@ -67,10 +73,30 @@ QtObject {
     onWallpaperSourceChanged: notify()
     onShowWindowTitleBarsChanged: notify()
     onWindowCornerRadiusChanged: notify()
+    onWindowGeometryChanged: notify()
 
     function notify() {
         if (!suppressChangeNotifications)
             persistedValueChanged()
+    }
+
+    // Saved geometry for one hosted application, or null when none has been saved.
+    function geometryFor(appId) {
+        var saved = windowGeometry[appId]
+        return saved !== undefined && saved !== null ? saved : null
+    }
+
+    // Record the geometry of one hosted application. Values are rounded so sub-pixel drags
+    // do not produce a new file write on every frame.
+    function setWindowGeometry(appId, rect) {
+        var next = Object.assign({}, windowGeometry)
+        next[appId] = {
+            "x": Math.round(rect.x),
+            "y": Math.round(rect.y),
+            "width": Math.round(rect.width),
+            "height": Math.round(rect.height)
+        }
+        windowGeometry = next
     }
 
     // The persisted JSON shape.
@@ -86,7 +112,8 @@ QtObject {
             "reduceMotion": reduceMotion,
             "wallpaperSource": wallpaperSource,
             "showWindowTitleBars": showWindowTitleBars,
-            "windowCornerRadius": windowCornerRadius
+            "windowCornerRadius": windowCornerRadius,
+            "windowGeometry": windowGeometry
         }
     }
 
@@ -119,6 +146,8 @@ QtObject {
             showWindowTitleBars = Boolean(values.showWindowTitleBars)
         if ("windowCornerRadius" in values)
             windowCornerRadius = Number(values.windowCornerRadius)
+        if ("windowGeometry" in values && values.windowGeometry && typeof values.windowGeometry === "object")
+            windowGeometry = values.windowGeometry
 
         suppressChangeNotifications = false
     }
