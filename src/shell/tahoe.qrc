@@ -36,5 +36,6 @@
 
         <file alias="apps/finder/FinderWindow.qml">../apps/finder/FinderWindow.qml</file>
         <file alias="apps/settings/SettingsWindow.qml">../apps/settings/SettingsWindow.qml</file>
+        <file alias="apps/calculator/CalculatorWindow.qml">../apps/calculator/CalculatorWindow.qml</file>
     </qresource>
 </RCC>
