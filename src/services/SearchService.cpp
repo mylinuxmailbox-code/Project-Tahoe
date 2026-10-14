@@ -7,6 +7,25 @@
 #include <QFileInfo>
 #include <QMultiMap>
 
+namespace {
+
+// Applications that ship inside this shell as QML windows. They are not .desktop entries, so the
+// registry cannot list them; they are searched here so Spotlight can open them like any other app.
+// The id must match the window layer's appSources key, because activation routes on that id.
+struct HostedApp {
+    const char *id;
+    const char *title;
+    const char *subtitle;
+};
+
+const HostedApp kHostedApps[] = {
+    { "finder", "Finder", "Browse files and folders" },
+    { "settings", "Settings", "Preferences for this shell" },
+    { "calculator", "Calculator", "Local arithmetic" },
+};
+
+} // namespace
+
 SearchService::SearchService(AppRegistry *apps, FileService *files, QObject *parent)
     : QObject(parent)
     , m_apps(apps)
@@ -115,10 +134,28 @@ QVariantList SearchService::search(const QString &query, int maxResults) const
 
     // Applications and settings are cheap and always searched. Filesystem search is the
     // expensive one, so it only runs for a real query and gets whatever budget is left.
+    // Hosted applications and registry applications are ranked together, so one list is
+    // best-first regardless of where an application comes from.
+    QMultiMap<int, QVariant> ranked;
+
+    for (const HostedApp &hosted : kHostedApps) {
+        const QString title = QString::fromLatin1(hosted.title);
+        const MatchRank best = rank(title, trimmed);
+        if (best == NoMatch)
+            continue;
+
+        QVariantMap entry;
+        entry.insert(QStringLiteral("type"), QStringLiteral("app"));
+        entry.insert(QStringLiteral("title"), title);
+        entry.insert(QStringLiteral("subtitle"), QString::fromLatin1(hosted.subtitle));
+        entry.insert(QStringLiteral("iconPath"), QString());
+        entry.insert(QStringLiteral("desktopId"), QString::fromLatin1(hosted.id));
+        ranked.insert(int(best), entry);
+    }
+
     if (m_apps) {
         const QVariantList apps = m_apps->toVariantList();
 
-        QMultiMap<int, QVariant> ranked;
         for (const QVariant &value : apps) {
             const QVariantMap app = value.toMap();
             const QString name = app.value(QStringLiteral("name")).toString();
@@ -137,13 +174,13 @@ QVariantList SearchService::search(const QString &query, int maxResults) const
                          app.value(QStringLiteral("desktopId")).toString());
             ranked.insert(int(best), entry);
         }
+    }
 
-        for (auto it = ranked.constEnd(); it != ranked.constBegin();) {
-            --it;
-            results.append(it.value());
-            if (results.size() >= maxResults)
-                return results;
-        }
+    for (auto it = ranked.constEnd(); it != ranked.constBegin();) {
+        --it;
+        results.append(it.value());
+        if (results.size() >= maxResults)
+            return results;
     }
 
     // Settings only make sense for short queries: nobody types a filename that matches
