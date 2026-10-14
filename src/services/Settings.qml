@@ -40,9 +40,12 @@ QtObject {
     property bool dockMagnification: true
     property real dockMagnificationStrength: 0.3
     property bool dockAutoHide: false
+    // Defaults only apply to a fresh install. A saved settings file keeps its own pinned list,
+    // so existing users pin Calculator themselves.
     property var dockPinnedApps: [
         { "id": "finder", "label": "Finder" },
-        { "id": "settings", "label": "Settings" }
+        { "id": "settings", "label": "Settings" },
+        { "id": "calculator", "label": "Calculator" }
     ]
 
     // ---- Appearance ----
