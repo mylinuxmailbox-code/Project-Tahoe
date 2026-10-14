@@ -48,6 +48,14 @@ public:
     Q_INVOKABLE QVariantMap move(const QString &source, const QString &destination) const;
     Q_INVOKABLE QVariantMap removePermanently(const QString &path) const;
 
+    // Reads a regular file as UTF-8 text. Returns { ok, error, text }. Refuses binary files,
+    // unreadable files, and files larger than maxBytes, so a text editor cannot exhaust memory.
+    Q_INVOKABLE QVariantMap readText(const QString &path, qint64 maxBytes) const;
+
+    // Writes UTF-8 text atomically (temporary file, then rename), so a failed save never leaves
+    // a half-written file. It replaces an existing regular file only; it never writes a folder.
+    Q_INVOKABLE QVariantMap writeText(const QString &path, const QString &content) const;
+
     // Parent directory of a path, for "go up" navigation.
     Q_INVOKABLE QString parentPath(const QString &path) const;
 
