@@ -1,4 +1,5 @@
 import QtQuick
+import Tahoe.Services 1.0
 import "../tokens"
 
 /* Project Tahoe X86 in-shell window layer.
@@ -6,6 +7,10 @@ import "../tokens"
  * Owns the windows of the applications this shell hosts. It is a real window manager for
  * those windows: it creates them, cascades their initial position, tracks stacking order,
  * focuses the top-most window, and minimises, restores, and closes them on request.
+ *
+ * Geometry is remembered per application through the Settings model, so a hosted window
+ * reopens where it was last moved and resized. Saved geometry is clamped to the current
+ * layer size, so a window saved on a larger display is never placed off screen.
  *
  * Scope is stated honestly: only applications that ship as QML inside this shell are
  * managed here. Applications launched from the registry (Firefox, a terminal emulator, and
@@ -33,6 +38,10 @@ Item {
         "finder": "system-file-manager",
         "settings": "preferences-system"
     })
+
+    // Smallest size a hosted window may be restored to, matching the resize handles.
+    readonly property int minWindowWidth: 420
+    readonly property int minWindowHeight: 280
 
     // Open windows. Row roles: appId, title, x, y, width, height, stack, minimized, zoomed.
     property ListModel windows: ListModel {}
@@ -94,6 +103,37 @@ Item {
         return row >= 0 ? windows.get(row).minimized : false
     }
 
+    function clampNumber(value, low, high) {
+        return Math.max(low, Math.min(high, value))
+    }
+
+    // Placement for a newly opened window: its last saved geometry when there is one that
+    // still fits, otherwise the cascade position and default size.
+    function placementFor(appId, cascadeStep, defaultWidth, defaultHeight) {
+        var areaWidth = parent ? parent.width : defaultWidth
+        var areaHeight = parent ? parent.height : defaultHeight
+        var saved = Settings.geometryFor(appId)
+
+        if (saved && typeof saved.width === "number" && typeof saved.height === "number"
+                && typeof saved.x === "number" && typeof saved.y === "number") {
+            var width = clampNumber(saved.width, minWindowWidth, Math.max(minWindowWidth, areaWidth))
+            var height = clampNumber(saved.height, minWindowHeight, Math.max(minWindowHeight, areaHeight))
+            return {
+                "x": clampNumber(saved.x, 0, Math.max(0, areaWidth - 120)),
+                "y": clampNumber(saved.y, 0, Math.max(0, areaHeight - 40)),
+                "width": width,
+                "height": height
+            }
+        }
+
+        return {
+            "x": 48 + cascadeStep * 28,
+            "y": 32 + cascadeStep * 28,
+            "width": Math.max(minWindowWidth, defaultWidth),
+            "height": Math.max(minWindowHeight, defaultHeight)
+        }
+    }
+
     function openWindow(appId, fallbackTitle) {
         if (!isHosted(appId)) {
             lastLoadError = qsTr("'%1' is not an application this shell hosts").arg(appId)
@@ -111,16 +151,17 @@ Item {
 
         // Cascade placement so successive windows do not stack exactly on top of each other.
         var step = windows.count % 6
-        var width = Math.min(860, parent ? parent.width - 80 : 860)
-        var height = Math.min(580, parent ? parent.height - 140 : 580)
+        var defaultWidth = Math.min(860, parent ? parent.width - 80 : 860)
+        var defaultHeight = Math.min(580, parent ? parent.height - 140 : 580)
+        var placement = placementFor(appId, step, defaultWidth, defaultHeight)
 
         windows.append({
             "appId": appId,
             "title": displayTitle(appId, fallbackTitle),
-            "x": 48 + step * 28,
-            "y": 32 + step * 28,
-            "width": Math.max(420, width),
-            "height": Math.max(280, height),
+            "x": placement.x,
+            "y": placement.y,
+            "width": placement.width,
+            "height": placement.height,
             "stack": ++topStack,
             "minimized": false,
             "zoomed": false
@@ -219,6 +260,10 @@ Item {
             // The layer draws above the Dock area only where a window actually sits.
             z: 10 + model.stack
 
+            // Set once the initial geometry has been applied. Until then, geometry changes are
+            // the layer placing the window, not the user, so they are not written to settings.
+            property bool geometryReady: false
+
             // Initial geometry comes from the model once, then this frame owns it and
             // writes changes back. Binding instead would fight every drag.
             Component.onCompleted: {
@@ -226,6 +271,15 @@ Item {
                 y = model.y
                 width = model.width
                 height = model.height
+                geometryReady = true
+            }
+
+            // Remember the window's place for the next time it is opened. Zoomed geometry is
+            // the screen-filling state, so it is never saved as the normal size.
+            function persistGeometry() {
+                if (!geometryReady || frame.isZoomed)
+                    return
+                Settings.setWindowGeometry(appId, { "x": x, "y": y, "width": width, "height": height })
             }
 
             function syncGeometry() {
@@ -236,6 +290,7 @@ Item {
                 layer.windows.setProperty(row, "y", y)
                 layer.windows.setProperty(row, "width", width)
                 layer.windows.setProperty(row, "height", height)
+                persistGeometry()
             }
 
             onXChanged: syncGeometry()
@@ -254,6 +309,8 @@ Item {
                 if (frame.isZoomed) {
                     restoreFromZoom()
                     layer.windows.setProperty(row, "zoomed", false)
+                    // Geometry changed while still zoomed, so it was not saved then. Save now.
+                    persistGeometry()
                 } else {
                     zoomToFill()
                     layer.windows.setProperty(row, "zoomed", true)
