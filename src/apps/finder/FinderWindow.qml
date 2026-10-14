@@ -10,6 +10,9 @@ import "../../shared/tokens"
  *
  * Deleting moves items to the freedesktop trash, so it is recoverable. Permanent removal is
  * only reachable through the Trash's "Empty Trash" action, which says what it does.
+ *
+ * Copy, cut, and paste hold a real path, never a copy of the data. Paste goes through
+ * FileService, which refuses to overwrite: a name clash is reported, not silently replaced.
  */
 Item {
     id: finder
@@ -34,6 +37,10 @@ Item {
     property string renameText: ""
     property string message: ""
     property bool messageIsError: false
+
+    // Copy and cut hold the source path only. Paste reads the filesystem at that moment.
+    property string clipboardPath: ""
+    property bool clipboardIsCut: false
 
     function report(text, isError) {
         message = text
@@ -229,6 +236,111 @@ Item {
         refresh()
     }
 
+    // ---- Copy, cut, paste, duplicate ----
+
+    function joinPath(dir, name) {
+        return dir.endsWith("/") ? dir + name : dir + "/" + name
+    }
+
+    function existsAt(path) {
+        var info = FileService.stat(path)
+        return info !== undefined && info !== null && info.name !== undefined
+    }
+
+    // A name that does not collide with anything in the directory: "a.txt" is taken, so
+    // "a copy.txt" is tried first, then "a copy 2.txt", and so on.
+    function duplicateNameIn(dir, baseName, ext) {
+        var candidate = baseName + " copy" + ext
+        var n = 2
+        while (existsAt(joinPath(dir, candidate))) {
+            candidate = baseName + " copy " + n + ext
+            ++n
+        }
+        return candidate
+    }
+
+    function duplicateSelected() {
+        if (trashMode || selectedPath.length === 0 || !existsAt(selectedPath)) {
+            report("Select an item to duplicate", true)
+            return
+        }
+
+        var name = selectedPath.substring(selectedPath.lastIndexOf("/") + 1)
+        var dot = name.lastIndexOf(".")
+        var baseName = dot > 0 ? name.substring(0, dot) : name
+        var ext = dot > 0 ? name.substring(dot) : ""
+
+        var parent = FileService.parentPath(selectedPath)
+        var copyName = duplicateNameIn(parent, baseName, ext)
+        var result = FileService.copy(selectedPath, joinPath(parent, copyName))
+
+        if (result.ok) {
+            refresh()
+            report("Duplicated as " + copyName, false)
+        } else {
+            report(result.error, true)
+        }
+    }
+
+    function stageSelected(isCut) {
+        if (trashMode || selectedPath.length === 0) {
+            report("Select an item to " + (isCut ? "cut" : "copy"), true)
+            return
+        }
+        if (!existsAt(selectedPath)) {
+            report("That item no longer exists", true)
+            selectedPath = ""
+            refresh()
+            return
+        }
+
+        clipboardPath = selectedPath
+        clipboardIsCut = isCut
+        var name = selectedPath.substring(selectedPath.lastIndexOf("/") + 1)
+        report((isCut ? "Cut " : "Copied ") + name + ". Open a folder and paste to finish.", false)
+    }
+
+    function pasteHere() {
+        if (trashMode) {
+            report("Open a folder to paste into. The Trash cannot receive items.", true)
+            return
+        }
+        if (clipboardPath.length === 0) {
+            report("Nothing to paste. Copy or cut an item first.", true)
+            return
+        }
+        if (!existsAt(clipboardPath)) {
+            report("The copied item no longer exists", true)
+            clipboardPath = ""
+            clipboardIsCut = false
+            return
+        }
+
+        // A folder cannot go inside itself: the copy would never finish.
+        var sourceIsDir = FileService.isDirectory(clipboardPath)
+        if (sourceIsDir && (currentPath === clipboardPath || currentPath.indexOf(clipboardPath + "/") === 0)) {
+            report("A folder cannot be pasted into itself", true)
+            return
+        }
+
+        // Passing the folder as the destination means "put it inside". FileService refuses
+        // when the name is already there, so nothing is overwritten.
+        var result = clipboardIsCut
+            ? FileService.move(clipboardPath, currentPath)
+            : FileService.copy(clipboardPath, currentPath)
+
+        if (result.ok) {
+            if (clipboardIsCut) {
+                clipboardPath = ""
+                clipboardIsCut = false
+            }
+            refresh()
+            report(result.message, false)
+        } else {
+            report(result.error, true)
+        }
+    }
+
     function locationsList() {
         var map = FileService.locations()
         var order = ["Home", "Desktop", "Documents", "Downloads", "Music", "Pictures", "Videos",
@@ -249,6 +361,24 @@ Item {
     Keys.onEscapePressed: {
         selectedPath = ""
         renaming = false
+    }
+
+    // Standard file-manager shortcuts. Ctrl+C in the rename field is handled by the field
+    // itself, because it holds focus while renaming.
+    Keys.onPressed: function (event) {
+        if (!(event.modifiers & Qt.ControlModifier))
+            return
+        if (event.key === Qt.Key_C)
+            finder.stageSelected(false)
+        else if (event.key === Qt.Key_X)
+            finder.stageSelected(true)
+        else if (event.key === Qt.Key_V)
+            finder.pasteHere()
+        else if (event.key === Qt.Key_D)
+            finder.duplicateSelected()
+        else
+            return
+        event.accepted = true
     }
 
     Rectangle {
@@ -336,6 +466,10 @@ Item {
                     model: [
                         { "label": qsTr("New Folder"), "action": "mkdir", "needsFile": true },
                         { "label": qsTr("Rename"), "action": "rename", "needsFile": true },
+                        { "label": qsTr("Duplicate"), "action": "duplicate", "needsFile": true },
+                        { "label": qsTr("Copy"), "action": "copy", "needsFile": true },
+                        { "label": qsTr("Cut"), "action": "cut", "needsFile": true },
+                        { "label": qsTr("Paste"), "action": "paste", "needsFile": true },
                         { "label": qsTr("Trash"), "action": "trash", "needsFile": true },
                         { "label": qsTr("Restore"), "action": "restore", "needsFile": false },
                         { "label": qsTr("Empty"), "action": "empty", "needsFile": false }
@@ -369,6 +503,14 @@ Item {
                                     finder.makeFolder()
                                 else if (modelData.action === "rename")
                                     finder.beginRename()
+                                else if (modelData.action === "duplicate")
+                                    finder.duplicateSelected()
+                                else if (modelData.action === "copy")
+                                    finder.stageSelected(false)
+                                else if (modelData.action === "cut")
+                                    finder.stageSelected(true)
+                                else if (modelData.action === "paste")
+                                    finder.pasteHere()
                                 else if (modelData.action === "trash")
                                     finder.trashSelected()
                                 else if (modelData.action === "restore")
