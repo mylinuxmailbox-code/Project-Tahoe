@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QSaveFile>
 #include <QStandardPaths>
 #include <QDateTime>
 
@@ -298,6 +299,76 @@ QVariantMap FileService::removePermanently(const QString &path) const
         return failure(QStringLiteral("Could not remove '%1'").arg(info.fileName()));
 
     return success(QStringLiteral("Removed '%1'").arg(info.fileName()));
+}
+
+QVariantMap FileService::readText(const QString &path, qint64 maxBytes) const
+{
+    const QFileInfo info(path);
+    if (!info.exists())
+        return failure(QStringLiteral("No such file: %1").arg(path));
+
+    if (!info.isFile())
+        return failure(QStringLiteral("'%1' is not a regular file").arg(info.fileName()));
+
+    if (!info.isReadable())
+        return failure(QStringLiteral("No permission to read '%1'").arg(info.fileName()));
+
+    if (info.size() > maxBytes)
+        return failure(QStringLiteral("'%1' is %2 bytes, over the %3-byte limit")
+                           .arg(info.fileName())
+                           .arg(info.size())
+                           .arg(maxBytes));
+
+    QFile file(info.absoluteFilePath());
+    if (!file.open(QIODevice::ReadOnly))
+        return failure(QStringLiteral("Could not open '%1': %2")
+                           .arg(info.fileName(), file.errorString()));
+
+    const QByteArray raw = file.readAll();
+    file.close();
+
+    // A NUL byte is the cheapest reliable sign of binary data. Opening it as text would show
+    // garbage and invite a save that corrupts it.
+    if (raw.contains('\0'))
+        return failure(QStringLiteral("'%1' looks like a binary file, so it is not opened as text")
+                           .arg(info.fileName()));
+
+    QVariantMap map = success(QStringLiteral("Read '%1'").arg(info.fileName()));
+    map.insert(QStringLiteral("text"), QString::fromUtf8(raw));
+    return map;
+}
+
+QVariantMap FileService::writeText(const QString &path, const QString &content) const
+{
+    const QFileInfo info(path);
+    if (path.trimmed().isEmpty())
+        return failure(QStringLiteral("A file path is required"));
+
+    if (info.isDir())
+        return failure(QStringLiteral("'%1' is a folder, not a file").arg(info.fileName()));
+
+    if (!info.absoluteDir().exists())
+        return failure(QStringLiteral("Folder does not exist: %1").arg(info.absolutePath()));
+
+    // QSaveFile writes to a temporary file and renames it over the target only on commit, so
+    // an interrupted save leaves the previous contents intact.
+    QSaveFile file(info.absoluteFilePath());
+    if (!file.open(QIODevice::WriteOnly))
+        return failure(QStringLiteral("Could not save '%1': %2")
+                           .arg(info.fileName(), file.errorString()));
+
+    const QByteArray payload = content.toUtf8();
+    if (file.write(payload) != payload.size()) {
+        const QString reason = file.errorString();
+        file.cancelWriting();
+        return failure(QStringLiteral("Could not save '%1': %2").arg(info.fileName(), reason));
+    }
+
+    if (!file.commit())
+        return failure(QStringLiteral("Could not save '%1': %2")
+                           .arg(info.fileName(), file.errorString()));
+
+    return success(QStringLiteral("Saved '%1'").arg(info.fileName()));
 }
 
 QString FileService::parentPath(const QString &path) const
